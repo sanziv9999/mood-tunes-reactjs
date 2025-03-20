@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+
 import { Button, Space, Table, Typography, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { deleteUserById, fetchUsers } from '../../utils/user.util';
 
 const { Title } = Typography;
 
@@ -15,21 +16,8 @@ const Users = ({ title = 'Users' }) => {
     navigate('/admin/users/create');
   };
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:4000/users');
-      setData(response.data.map(item => ({ ...item, key: item.id }))); 
-    } catch (error) {
-      console.error('Error fetching data: ', error);
-      message.error('Failed to fetch users');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchUsers();
+    fetchUsers().then((users) => setData(users));
   }, []);
 
   const handleEdit = (id) => {
@@ -37,19 +25,12 @@ const Users = ({ title = 'Users' }) => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      setLoading(true);
-      const response = await axios.delete(`http://localhost:4000/users/${id}`);
-      if (response.status === 200 || response.status === 204) {
+    deleteUserById(id)
+      .then(() => {
         message.success('User deleted successfully');
-        await fetchUsers(); // Refresh the list
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      message.error(`Failed to delete user: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+        setData(data.filter((item) => item.id !== id));
+      })
+      .catch(() => message.error('Error deleting  user'));
   };
 
   const columns = [
@@ -134,6 +115,9 @@ const Users = ({ title = 'Users' }) => {
             Add User
           </Button>
         </Space>
+
+
+        
 
         <Table
           columns={columns}

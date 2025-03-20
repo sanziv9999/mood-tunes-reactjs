@@ -1,10 +1,27 @@
 {
   "users": [
     {
-      "id": "4728",
-      "name": "Sudip",
+      "id": "dd4c",
+      "name": "sudip ",
       "age": 18,
       "email": "sudip@gmail.com",
+      "password": "sudip",
+      "role": "user"
+    },
+    {
+      "id": "4222",
+      "name": "abc",
+      "age": 19,
+      "email": "sanzivmagat80@gmail.com",
+      "password": "sanzivmagat80",
+      "role": "admin"
+    },
+    {
+      "id": "61ed",
+      "name": "xyz",
+      "age": 20,
+      "email": "magat80@gmail.com",
+      "password": "magat80",
       "role": "user"
     }
   ]

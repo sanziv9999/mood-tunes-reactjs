@@ -1,24 +1,23 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, Flex, Card, message, App } from 'antd';
+import { checkLogin } from '../../utils/user.util';
+import { UserContext } from '../../context/user.context';
 
 const Login = () => {
   const navigate = useNavigate();
+  const {_setUser} = useContext(UserContext);
 
   const onFinish = (values) => {
     try {
-      if (values.username === 'admin@gmail.com' && values.password === 'admin') {
-        message.success({
-          content: 'Login successful',
-          duration: 2,
-          style: {
-            marginTop: '20vh',
-          },
-        });
+      checkLogin(values.email, values.password).then((data) => {
+        if (data) {
+        _setUser(data);
+        localStorage.setItem('user', JSON.stringify(data));
         localStorage.setItem('isAuthenticated', 'true');
         setTimeout(() => {
-          navigate('/admin/dashboard');
+          navigate('/admin/users');
         }, 1000);
       } else {
         message.error({
@@ -29,7 +28,7 @@ const Login = () => {
           },
         });
         localStorage.setItem('isAuthenticated', 'false');
-      }
+      }});
     } catch (error) {
       message.error({
         content: 'An error occurred',
@@ -67,7 +66,7 @@ const Login = () => {
             size="large"
           >
             <Form.Item
-              name="username"
+              name="email"
               rules={[
                 {
                   required: true,

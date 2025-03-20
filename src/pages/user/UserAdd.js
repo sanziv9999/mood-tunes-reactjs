@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, InputNumber, Select, Button, Card, message } from 'antd';
 import { UserOutlined, MailOutlined } from '@ant-design/icons';
-import axios from 'axios';
+
+import { addUser } from '../../utils/user.util';
 
 const { Option } = Select;
 
@@ -11,16 +12,12 @@ const UserAdd = () => {
     const [form] = Form.useForm();
 
     const onFinish = (values) => {
-        axios.post('http://localhost:4000/users', values)
-            .then((response) => {   
-                console.log('User added successfully:', response.data);
-                message.success('User added successfully');     
-                navigate('/admin/users');
-            })  
-            .catch((error) => {
-                console.error('Error adding user:', error);
-                message.error('Error adding user');
-            }); 
+       addUser(values)
+        .then(() => {
+            message.success('User added successfully');
+            navigate('/admin/users');
+        })
+        .catch(() => message.error('Error adding user'));
     };
 
     return (

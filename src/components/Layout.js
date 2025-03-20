@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Outlet, useNavigate } from "react-router-dom";
 import {
   MenuFoldOutlined,
@@ -7,11 +7,12 @@ import {
   UserOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
-import { Button, Layout, Menu, theme } from 'antd';
-
+import { Button, Layout, Menu, theme, Avatar } from 'antd';
+import { UserContext } from '../context/user.context';
 const { Header, Sider, Content } = Layout;
 
 const CustomLayout = () => {
+  const { _user } = useContext(UserContext);
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const {
@@ -19,21 +20,29 @@ const CustomLayout = () => {
   } = theme.useToken();
 
   useEffect(() => {
-    const isLogin = localStorage.getItem('isAuthenticated');
-    if (!isLogin) {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (isAuthenticated !== 'true') {
       navigate('/login');
     }
   }, [navigate]);
 
   const handleLogoutClick = () => {
     localStorage.setItem('isAuthenticated', 'false');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="logo" style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)' }} />
+        <div className="demo-logo-vertical">
+          <img 
+            src="https://www.virinchicollege.edu.np/storage/site/941680252040.png" 
+            alt="logo" 
+            style={{height: 90, padding: 25}} 
+          />
+        </div>
+        
         <Menu
           theme="dark"
           mode="inline"
@@ -76,6 +85,7 @@ const CustomLayout = () => {
             zIndex: 1,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between', // Added to space elements
           }}
         >
           <Button
@@ -88,6 +98,18 @@ const CustomLayout = () => {
               height: 64,
             }}
           />
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            marginRight: '24px' 
+          }}>
+            <Avatar 
+              icon={<UserOutlined />} 
+              style={{ marginRight: '8px' }} 
+            />
+            <span style={{ color: "#000000" }}>{_user?.email}</span>
+          </div>
         </Header>
         <Content
           style={{
@@ -95,7 +117,7 @@ const CustomLayout = () => {
             padding: 24,
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
-            minHeight: 'calc(100vh - 112px)', // 64px header + 24px margin top + 24px margin bottom
+            minHeight: 'calc(100vh - 112px)',
             overflow: 'auto'
           }}
         >

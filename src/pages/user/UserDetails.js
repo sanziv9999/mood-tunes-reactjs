@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from 'axios';
 import { Card, Form, Input, InputNumber, Select, Button, Spin, Alert, Typography } from 'antd';
+import { fetchUserById } from "../../utils/user.util";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -15,17 +16,11 @@ const UserDetails = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`http://localhost:4000/users/${userId}`);
-        form.setFieldsValue(response.data);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        setError('Failed to load user details. Please try again later.');
-      } finally {
-        setLoading(false);
+      fetchUserById(userId).then((user) => { 
+        form.setFieldsValue(user);
+        setLoading(false);  
       }
+      );
     };
 
     fetchUser();
