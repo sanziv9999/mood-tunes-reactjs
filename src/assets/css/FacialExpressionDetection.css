@@ -1,0 +1,19 @@
+.app-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.video {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.ant-card {
+  border-radius: 8px;
+}
+
+.ant-descriptions-item-label {
+  width: 100px;
+}
