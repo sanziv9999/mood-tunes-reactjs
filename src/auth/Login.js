@@ -31,7 +31,7 @@ function Login() {
     } else {
       setErrors({});
       console.log('Login form submitted:', formData);
-      // Add your login logic here (e.g., API call)
+      
     }
   };
 

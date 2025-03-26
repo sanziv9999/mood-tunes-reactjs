@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import ErrorBoundary from './error/ErrorBoundary';
 import Login from './auth/Login';
 import Signup from './auth/Signup';
@@ -9,24 +9,33 @@ import HowItWorks from './components/HowItWorks';
 import Testimonials from './components/Testimonials';
 import Download from './components/Download';
 import CustomFooter from './components/CustomFooter';
+import FacialExpressionDetection from './components/FacialExpressionDetection'; // Added FacialExpressionDetection
+import MuiscSuggestion from './components/MuiscSuggestion';
 
-// Layout component for main app pages (with header and footer)
+// Layout component for all pages (with header and footer)
 function MainLayout() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <CustomHeader />
-      <Outlet /> {/* This will render the child routes (Hero, Features, etc.) */}
+      <main className="flex-grow">
+        <Outlet />
+      </main>
       <CustomFooter />
-    </>
+    </div>
   );
 }
+
+// // Protected Route component to ensure user is authenticated
+// function ProtectedRoute({ children }) {
+//   const token = window.localStorage.getItem("token");
+//   return token ? children : <Navigate to="/login" replace />;
+// }
 
 function App() {
   return (
     <Router>
       <ErrorBoundary>
         <Routes>
-          {/* Main app pages with header and footer */}
           <Route element={<MainLayout />}>
             <Route
               path="/"
@@ -40,9 +49,19 @@ function App() {
                 </>
               }
             />
+            <Route
+              path="/facial-expression-detection"
+              element={
+                // <ProtectedRoute>
+                  <FacialExpressionDetection />
+                // </ProtectedRoute>
+              }
+            />
+            {/* <Route path='/facial-expression-detection' element={ <MuiscSuggestion />}
+            /> */}
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-
-          {/* Standalone pages without header and footer */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
         </Routes>

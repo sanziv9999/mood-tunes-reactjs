@@ -47,8 +47,8 @@ function Hero() {
             <div className="relative flex items-center justify-center group perspective-1000">
               <div className="relative transform transition-all duration-500 group-hover:rotate-3 group-hover:scale-105">
                 <img
-                  src="https://via.placeholder.com/400x600"
-                  alt="MoodTunes App Preview"
+                  src=""
+                  alt="MoodTunes Preview"
                   className="rounded-xl max-w-full h-auto shadow-2xl object-cover border border-purple-100"
                 />
                 {/* Floating Badge */}
