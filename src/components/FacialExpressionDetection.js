@@ -65,7 +65,7 @@ const FacialExpressionDetection = () => {
     }
 
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'user' } })
+      .getUserMedia({ video: { facingMode: 'user',  } })
       .then((stream) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -622,30 +622,46 @@ const FacialExpressionDetection = () => {
   }, [setToken, setSuggestions, setPlayingTrackId, setCreatedPlaylistId, setPlaylistTracks, setCapturedImage, setExpressionScores, startVideo]);
 
   const togglePlay = useCallback(
-    (track) => {
+    async (track) => {
       if (!track.preview_url) {
-        console.log('No preview available for this track. Try opening it in Spotify.');
+        console.log('No preview available for this track.');
         return;
       }
-
-      if (playingTrackId === track.id) {
-        audioRef.current.pause();
-        setPlayingTrackId(null);
-      } else {
+  
+      try {
+        // If clicking the same track that's playing, pause it
+        if (playingTrackId === track.id) {
+          audioRef.current.pause();
+          setPlayingTrackId(null);
+          return;
+        }
+  
+        // If a different track is playing, stop it first
+        if (playingTrackId) {
+          audioRef.current.pause();
+        }
+  
+        // Load the new track
         audioRef.current.src = track.preview_url;
-        audioRef.current
-          .play()
-          .then(() => {
-            setPlayingTrackId(track.id);
-          })
-          .catch((err) => {
-            console.error('Playback error:', err);
-            if (err.name === 'NotAllowedError') {
-              console.log('Playback was blocked. Please interact with the page (e.g., click) before playing audio.');
-            } else {
-              console.log('Failed to play preview. Try opening in Spotify.');
-            }
-          });
+        audioRef.current.load(); // Ensure the new source is loaded
+  
+        // Attempt to play
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          await playPromise
+            .then(() => {
+              setPlayingTrackId(track.id);
+            })
+            .catch(error => {
+              console.error('Playback failed:', error);
+              // Show user feedback that interaction is needed
+              alert('Please click the play button again to start playback. Some browsers require this.');
+            });
+        }
+      } catch (error) {
+        console.error('Audio error:', error);
+        setPlayingTrackId(null);
       }
     },
     [playingTrackId]
@@ -747,7 +763,8 @@ const FacialExpressionDetection = () => {
                     ref={videoRef}
                     autoPlay
                     muted
-                    className="w-full h-auto rounded-lg"
+                    playsInline
+                    className="w-full h-auto rounded-lg transform scale-x-[-1]" // This flips the video horizontally
                     style={{ display: cameraError ? 'none' : 'block' }}
                   />
                   {cameraError && (
