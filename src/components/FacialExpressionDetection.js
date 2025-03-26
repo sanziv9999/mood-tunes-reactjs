@@ -31,25 +31,56 @@ const FacialExpressionDetection = () => {
 
   const spotifyApi = useMemo(() => new SpotifyWebApi(), []);
 
-  const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID || '07119f923efd42afa83501788c9b90a1';
-  const REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/facial-expression-detection/';
+  const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ;
+  const REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI ;
   const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
   const RESPONSE_TYPE = 'token';
   const SCOPES = 'user-read-private streaming playlist-modify-public playlist-modify-private';
 
-  const moodToGenres = useMemo(
-    () => ({
-      happy: ['pop', 'dance-pop', 'electropop'],
-      sad: ['blues', 'acoustic', 'indie-folk'],
-      angry: ['rock', 'hard-rock', 'punk-rock'],
-      neutral: ['chill', 'lo-fi', 'downtempo'],
-      fearful: ['ambient', 'classical', 'new-age'],
-      surprised: ['dance', 'electronic', 'edm'],
-    }),
-    []
-  );
+ // State for dynamic mood options and genres
+ const [moodOptions, setMoodOptions] = useState([]);
+ const [moodToGenres, setMoodToGenres] = useState({});
 
-  const moodOptions = ['Happy', 'Sad', 'Angry', 'Neutral', 'Fearful', 'Surprised'];
+ // Fetch mood types and mood-genre mappings from the backend
+ useEffect(() => {
+   const fetchMoodsAndGenres = async () => {
+     try {
+       // Fetch mood types
+       const moodsResponse = await fetch('http://localhost:8000/api/moods/');
+       if (!moodsResponse.ok) throw new Error('Failed to fetch moods');
+       const moodsData = await moodsResponse.json();
+       const capitalizedMoods = moodsData.map(mood => 
+         mood.charAt(0).toUpperCase() + mood.slice(1)
+       );
+       setMoodOptions(capitalizedMoods);
+
+       // Fetch mood-genre mappings
+       const genresResponse = await fetch('http://localhost:8000/api/mood-genres/');
+       if (!genresResponse.ok) throw new Error('Failed to fetch mood genres');
+       const genresData = await genresResponse.json();
+       const moodGenreMap = genresData.reduce((acc, item) => {
+         acc[item.mood.toLowerCase()] = item.genres;
+         return acc;
+       }, {});
+       setMoodToGenres(moodGenreMap);
+     } catch (error) {
+       console.error('Error fetching moods or genres:', error);
+       // Fallback to hardcoded values
+       const fallbackMoodToGenres = {
+         happy: ['pop', 'dance-pop', 'electropop'],
+         sad: ['blues', 'acoustic', 'indie-folk'],
+         angry: ['rock', 'hard-rock', 'punk-rock'],
+         neutral: ['chill', 'lo-fi', 'downtempo'],
+         fearful: ['ambient', 'classical', 'new-age'],
+         surprised: ['dance', 'electronic', 'edm'],
+       };
+       setMoodToGenres(fallbackMoodToGenres);
+       setMoodOptions(['Happy', 'Sad', 'Angry', 'Neutral', 'Fearful', 'Surprised']);
+     }
+   };
+
+   fetchMoodsAndGenres();
+ }, []);
 
   useEffect(() => {
     if (token) {
