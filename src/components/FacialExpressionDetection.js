@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as faceapi from 'face-api.js';
 import SpotifyWebApi from 'spotify-web-api-js';
-import { debounce } from 'lodash'; // Add lodash for debouncing
-
+import { debounce } from 'lodash';
 
 const FacialExpressionDetection = () => {
   const videoRef = useRef(null);
@@ -10,7 +9,7 @@ const FacialExpressionDetection = () => {
   const audioRef = useRef(null);
   const sectionRef = useRef(null);
   const capturedCanvasRef = useRef(null);
-  const [mood, setMood] = useState('Neutral');
+  const [mood, setMood] = useState('Unknown');
   const [gender, setGender] = useState('');
   const [age, setAge] = useState(null);
   const [expressionScores, setExpressionScores] = useState({});
@@ -27,60 +26,40 @@ const FacialExpressionDetection = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState('');
   const [isFetchingTracks, setIsFetchingTracks] = useState(false);
-  const [fetchError, setFetchError] = useState(null); // New state for fetch errors
+  const [fetchError, setFetchError] = useState(null);
+  const [detectionError, setDetectionError] = useState(null); // New state for detection errors
 
   const spotifyApi = useMemo(() => new SpotifyWebApi(), []);
 
-  const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID ;
-  const REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI ;
+  const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
+  const REDIRECT_URI = process.env.REACT_APP_SPOTIFY_REDIRECT_URI;
   const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
   const RESPONSE_TYPE = 'token';
   const SCOPES = 'user-read-private streaming playlist-modify-public playlist-modify-private';
 
- // State for dynamic mood options and genres
- const [moodOptions, setMoodOptions] = useState([]);
- const [moodToGenres, setMoodToGenres] = useState({});
+  const [moodOptions, setMoodOptions] = useState([]);
+  const [moodToGenres, setMoodToGenres] = useState({});
 
- // Fetch mood types and mood-genre mappings from the backend
- useEffect(() => {
-   const fetchMoodsAndGenres = async () => {
-     try {
-       // Fetch mood types
-       const moodsResponse = await fetch('http://localhost:8000/api/moods/');
-       if (!moodsResponse.ok) throw new Error('Failed to fetch moods');
-       const moodsData = await moodsResponse.json();
-       const capitalizedMoods = moodsData.map(mood => 
-         mood.charAt(0).toUpperCase() + mood.slice(1)
-       );
-       setMoodOptions(capitalizedMoods);
+  useEffect(() => {
+    const fetchMoodsAndGenres = async () => {
+      try {
+        const moodsResponse = await fetch('http://localhost:8000/api/moods/');
+        if (!moodsResponse.ok) throw new Error('Failed to fetch moods');
+        const moodsData = await moodsResponse.json();
+        const capitalizedMoods = moodsData.map(mood => 
+          mood.name.charAt(0).toUpperCase() + mood.name.slice(1)
+        );
+        setMoodOptions(capitalizedMoods);
+        setMood('Unknown'); // Initial mood is 'Unknown'
+      } catch (error) {
+        console.error('Error fetching moods or genres:', error);
+        setMoodOptions([]);
+        setMoodToGenres({});
+      }
+    };
 
-       // Fetch mood-genre mappings
-       const genresResponse = await fetch('http://localhost:8000/api/mood-genres/');
-       if (!genresResponse.ok) throw new Error('Failed to fetch mood genres');
-       const genresData = await genresResponse.json();
-       const moodGenreMap = genresData.reduce((acc, item) => {
-         acc[item.mood.toLowerCase()] = item.genres;
-         return acc;
-       }, {});
-       setMoodToGenres(moodGenreMap);
-     } catch (error) {
-       console.error('Error fetching moods or genres:', error);
-       // Fallback to hardcoded values
-       const fallbackMoodToGenres = {
-         happy: ['pop', 'dance-pop', 'electropop'],
-         sad: ['blues', 'acoustic', 'indie-folk'],
-         angry: ['rock', 'hard-rock', 'punk-rock'],
-         neutral: ['chill', 'lo-fi', 'downtempo'],
-         fearful: ['ambient', 'classical', 'new-age'],
-         surprised: ['dance', 'electronic', 'edm'],
-       };
-       setMoodToGenres(fallbackMoodToGenres);
-       setMoodOptions(['Happy', 'Sad', 'Angry', 'Neutral', 'Fearful', 'Surprised']);
-     }
-   };
-
-   fetchMoodsAndGenres();
- }, []);
+    fetchMoodsAndGenres();
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -91,25 +70,21 @@ const FacialExpressionDetection = () => {
   const startVideo = useCallback(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setCameraError('Camera access is not supported in this browser.');
-      console.log('Camera access is not supported. Use a modern browser like Chrome or Firefox.');
       return;
     }
 
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'user',  } })
+      .getUserMedia({ video: { facingMode: 'user' } })
       .then((stream) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
-            console.log('Webcam started and playing');
           };
         }
       })
       .catch((err) => {
-        console.error('Webcam error:', err);
         setCameraError(`Camera access failed: ${err.message}. Please allow camera permissions or check your device.`);
-        console.log(`Camera access failed: ${err.message}. Check permissions or device.`);
       });
   }, []);
 
@@ -125,7 +100,6 @@ const FacialExpressionDetection = () => {
 
   useEffect(() => {
     const sectionElement = sectionRef.current;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -177,11 +151,10 @@ const FacialExpressionDetection = () => {
           faceapi.nets.faceExpressionNet.loadFromUri('/models'),
           faceapi.nets.ageGenderNet.loadFromUri('/models'),
         ]);
-        console.log('Models loaded successfully');
         startVideo();
       } catch (error) {
         console.error('Error loading models:', error);
-        console.log('Failed to load face detection models. Check the /models folder and network.');
+        setDetectionError('Failed to load face detection models. Please refresh the page.');
       }
     };
     loadModels();
@@ -201,10 +174,45 @@ const FacialExpressionDetection = () => {
       setLoading(true);
       let selectedGenre = '';
       const moodLower = mood.toLowerCase();
-      const genres = moodToGenres[moodLower] || ['chill'];
+      const genres = moodToGenres[moodLower] || [];
+      let activitySuggestion = 'Explore local culture'; // Default fallback
+      let relaxationActivity = 'Take a moment to relax'; // Default fallback
+
+      // Fetch activity and relaxation suggestions
+      try {
+        const activityResponse = await fetch('http://localhost:8000/api/activity-suggestions/');
+        if (!activityResponse.ok) throw new Error('Failed to fetch activity suggestions');
+        const activityData = await activityResponse.json();
+        const matchingActivities = activityData.filter(item => item.mood.name.toLowerCase() === moodLower);
+        
+        if (matchingActivities.length > 0) {
+          const allSuggestions = matchingActivities.flatMap(item => item.suggestion);
+          if (allSuggestions.length > 0) {
+            activitySuggestion = allSuggestions[Math.floor(Math.random() * allSuggestions.length)];
+          }
+        }
+
+        const relaxationResponse = await fetch('http://localhost:8000/api/relaxation-activities/');
+        if (!relaxationResponse.ok) throw new Error('Failed to fetch relaxation activities');
+        const relaxationData = await relaxationResponse.json();
+        const matchingRelaxations = relaxationData.filter(item => item.mood.name.toLowerCase() === moodLower);
+        
+        if (matchingRelaxations.length > 0) {
+          const allActivities = matchingRelaxations.flatMap(item => item.activity);
+          if (allActivities.length > 0) {
+            relaxationActivity = allActivities[Math.floor(Math.random() * allActivities.length)];
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching activity/relaxation suggestions:', error);
+      }
 
       try {
         await spotifyApi.getMe();
+
+        if (genres.length === 0) {
+          throw new Error(`No genres defined for mood: ${mood}`);
+        }
 
         selectedGenre = genres[genreIndex % genres.length];
 
@@ -257,32 +265,14 @@ const FacialExpressionDetection = () => {
           }));
         }
 
-        const activitySuggestions = {
-          happy: 'Go for a cheerful walk in the park',
-          sad: 'Write in a journal to reflect on your feelings',
-          angry: 'Try a high-energy workout to release tension',
-          neutral: 'Explore a new hobby or interest',
-          fearful: 'Practice deep breathing exercises',
-          surprised: 'Share your excitement with a friend',
-        };
-
-        const relaxationSuggestions = {
-          happy: 'Dance to your favorite upbeat song',
-          sad: 'Listen to calming music and take a warm bath',
-          angry: 'Meditate to cool down your emotions',
-          neutral: 'Take a moment to stretch and breathe',
-          fearful: 'Try a guided relaxation audio',
-          surprised: 'Enjoy a moment of mindfulness',
-        };
-
         setSuggestions({
           music: musicSuggestions,
-          activity: activitySuggestions[moodLower] || 'Explore local music',
-          relaxation: relaxationSuggestions[moodLower] || 'Take a moment to breathe',
+          activity: activitySuggestion,
+          relaxation: relaxationActivity,
         });
 
         if (!musicSuggestions.some((track) => track.preview_url)) {
-          if (retryCount < 2) {
+          if (retryCount < 2 && genres.length > genreIndex + 1) {
             console.log(
               `No tracks with previews found for ${selectedGenre}. Trying ${genres[(genreIndex + 1) % genres.length]}...`
             );
@@ -293,19 +283,19 @@ const FacialExpressionDetection = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching suggestions:', error);
+        console.error('Error fetching music suggestions:', error);
         if (error.status === 401) {
           setToken('');
           window.localStorage.removeItem('token');
           console.log('Spotify session expired. Please log in again.');
-        } else if (retryCount < 2) {
+        } else if (retryCount < 2 && genres.length > genreIndex + 1) {
           console.log(
             `No tracks found for ${selectedGenre}. Trying ${genres[(genreIndex + 1) % genres.length]}...`
           );
           fetchSuggestions(mood, retryCount + 1, genreIndex + 1);
         } else {
           try {
-            selectedGenre = genres[Math.floor(Math.random() * genres.length)];
+            selectedGenre = genres[Math.floor(Math.random() * genres.length)] || 'pop';
             const searchResponse = await spotifyApi.searchTracks(`genre:${selectedGenre}`, { limit: 50 });
 
             const allTracks = searchResponse.tracks.items;
@@ -334,8 +324,8 @@ const FacialExpressionDetection = () => {
 
             setSuggestions({
               music: musicSuggestions,
-              activity: 'Explore local music',
-              relaxation: 'Take a moment to breathe',
+              activity: activitySuggestion,
+              relaxation: relaxationActivity,
             });
 
             if (!musicSuggestions.some((track) => track.preview_url)) {
@@ -343,11 +333,10 @@ const FacialExpressionDetection = () => {
             }
           } catch (searchError) {
             console.error('Fallback search failed:', searchError);
-            console.log('Failed to fetch recommendations. Please try again later.');
             setSuggestions({
               music: [],
-              activity: 'Explore local music',
-              relaxation: 'Take a moment to breathe',
+              activity: activitySuggestion,
+              relaxation: relaxationActivity,
             });
           }
         }
@@ -367,86 +356,102 @@ const FacialExpressionDetection = () => {
           img.onload = resolve;
         });
 
+        const originalWidth = img.width;
+        const originalHeight = img.height;
+
+        // Adjust TinyFaceDetectorOptions for better detection
         const detections = await faceapi
-          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 }))
           .withFaceLandmarks()
           .withFaceExpressions()
           .withAgeAndGender();
 
-        if (detections.length > 0) {
-          const { expressions, gender: detectedGender, age: detectedAge } = detections[0];
-          const maxExpression = Object.keys(expressions).reduce((a, b) =>
-            expressions[a] > expressions[b] ? a : b
-          );
-          const newMood = maxExpression.charAt(0).toUpperCase() + maxExpression.slice(1);
-          const newGender = detectedGender;
-          const newAge = Math.round(detectedAge);
-
-          const scores = {};
-          Object.keys(expressions).forEach((exp) => {
-            scores[exp.charAt(0).toUpperCase() + exp.slice(1)] = (expressions[exp] * 100).toFixed(2);
-          });
-          setExpressionScores(scores);
-
-          setMood(newMood);
-          setGender(newGender);
-          setAge(newAge);
-
-          const canvas = canvasRef.current;
-          faceapi.matchDimensions(canvas, { width: img.width, height: img.height });
-          const context = canvas.getContext('2d');
-          context.clearRect(0, 0, canvas.width, canvas.height);
-          context.drawImage(img, 0, 0);
-
-          const resizedDetections = faceapi.resizeResults(detections, { width: img.width, height: img.height });
-          faceapi.draw.drawDetections(canvas, resizedDetections);
-          faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
-          faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
-
-          resizedDetections.forEach((detection) => {
-            const box = detection.detection.box;
-            const text = `${detection.gender}, ${Math.round(detection.age)} years`;
-            const drawBox = new faceapi.draw.DrawTextField([text], box.topLeft);
-            drawBox.draw(canvas);
-          });
-
-          fetchSuggestions(newMood.toLowerCase());
-        } else {
-          setMood('Neutral');
-          setGender('');
-          setAge(null);
-          setExpressionScores({});
-          console.log('No faces detected in the captured image.');
-          fetchSuggestions('neutral');
+        if (detections.length === 0) {
+          // No face detected
+          setDetectionError('No face detected. Please ensure your face is visible and well-lit, then retake the picture.');
+          return null;
         }
+
+        const { expressions, gender: detectedGender, age: detectedAge } = detections[0];
+        const maxExpression = Object.keys(expressions).reduce((a, b) =>
+          expressions[a] > expressions[b] ? a : b
+        );
+
+        // Check if the highest expression score is too low (e.g., below 0.5)
+        if (expressions[maxExpression] < 0.5) {
+          setDetectionError('Expression detection confidence is too low. Please try a clearer expression or better lighting, then retake the picture.');
+          return null;
+        }
+
+        const newMood = maxExpression.charAt(0).toUpperCase() + maxExpression.slice(1);
+        const newGender = detectedGender;
+        const newAge = Math.round(detectedAge);
+
+        const scores = {};
+        Object.keys(expressions).forEach((exp) => {
+          scores[exp.charAt(0).toUpperCase() + exp.slice(1)] = (expressions[exp] * 100).toFixed(2);
+        });
+        setExpressionScores(scores);
+
+        const validMood = moodOptions.includes(newMood) ? newMood : null;
+        if (!validMood) {
+          setDetectionError('Detected mood is not supported. Please try a different expression or retake the picture.');
+          return null;
+        }
+
+        setMood(validMood);
+        setGender(newGender);
+        setAge(newAge);
+        setDetectionError(null); // Clear any previous detection errors
+
+        const canvas = canvasRef.current;
+        canvas.width = originalWidth;
+        canvas.height = originalHeight;
+
+        const context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const resizedDetections = faceapi.resizeResults(detections, { 
+          width: originalWidth, 
+          height: originalHeight 
+        });
+
+        faceapi.draw.drawDetections(canvas, resizedDetections);
+        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+        faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+
+        resizedDetections.forEach((detection) => {
+          const box = detection.detection.box;
+          const text = `${detection.gender}, ${Math.round(detection.age)} years`;
+          const drawBox = new faceapi.draw.DrawTextField([text], box.topLeft);
+          drawBox.draw(canvas);
+        });
+
+        fetchSuggestions(validMood.toLowerCase());
+        return validMood;
       } catch (error) {
         console.error('Detection error:', error);
-        console.log('Face detection failed. Please try again.');
-        setMood('Neutral');
-        setGender('');
-        setAge(null);
-        setExpressionScores({});
-        fetchSuggestions('neutral');
+        setDetectionError('An error occurred during face detection. Please retake the picture.');
+        return null;
       } finally {
         setLoading(false);
       }
     },
-    [fetchSuggestions, setMood, setGender, setAge, setExpressionScores]
+    [fetchSuggestions, moodOptions]
   );
 
-  const snapPicture = useCallback(() => {
-    if (!token || cameraError) {
-      console.log('Please log in to Spotify and ensure the camera is working.');
-      return;
-    }
+  const snapPicture = useCallback(async () => {
+    if (!token || cameraError) return;
 
     setLoading(true);
+    setDetectionError(null); // Clear previous detection errors
     const video = videoRef.current;
     const canvas = capturedCanvasRef.current;
 
     if (!video || !canvas) {
       setLoading(false);
-      console.log('Camera not ready. Please try again.');
+      setDetectionError('Camera or canvas not available. Please refresh the page and try again.');
       return;
     }
 
@@ -454,6 +459,7 @@ const FacialExpressionDetection = () => {
       width: video.videoWidth || 640,
       height: video.videoHeight || 480,
     };
+    
     canvas.width = displaySize.width;
     canvas.height = displaySize.height;
 
@@ -464,16 +470,38 @@ const FacialExpressionDetection = () => {
     setCapturedImage(imageDataUrl);
 
     stopVideo();
-    detectExpression(imageDataUrl);
+    const detectedMood = await detectExpression(imageDataUrl);
+
+    if (!detectedMood) {
+      // Detection failed, do not save the image or proceed
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    const blob = await fetch(imageDataUrl).then(res => res.blob());
+    formData.append('image', blob, `captured_image_${Date.now()}.jpg`);
+    formData.append('mood', detectedMood);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/captured-images/', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Failed to save image');
+      const result = await response.json();
+      console.log('Image saved successfully:', result);
+    } catch (error) {
+      console.error('Error saving image:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [token, cameraError, detectExpression, stopVideo]);
 
   const retakePicture = useCallback(() => {
-    // Stop any existing video stream first
     stopVideo();
-    
-    // Reset all states
     setCapturedImage(null);
-    setMood('Neutral');
+    setMood('Unknown');
     setGender('');
     setAge(null);
     setExpressionScores({});
@@ -481,21 +509,19 @@ const FacialExpressionDetection = () => {
     setCreatedPlaylistId(null);
     setPlaylistTracks([]);
     setFetchError(null);
-    
-    // Stop any playing audio
+    setDetectionError(null); // Clear detection error
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = '';
     }
     setPlayingTrackId(null);
-    
-    // Clear the canvas
+
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
-    
-    // Add a small delay before restarting video to ensure complete cleanup
+
     setTimeout(() => {
       startVideo();
     }, 100);
@@ -503,20 +529,20 @@ const FacialExpressionDetection = () => {
 
   const fetchPlaylistTracks = useCallback(async (playlistId) => {
     if (!token || !playlistId) return;
-  
+
     setIsFetchingTracks(true);
     setFetchError(null);
-    
+
     try {
       const response = await spotifyApi.getPlaylistTracks(playlistId, {
-        fields: 'items(track(id,name,artists(name),preview_url,external_urls(spotify),album(images))',
+        fields: 'items(track(id,name,artists(name),preview_url,external_urls(spotify),album(images)))',
         limit: 50
       });
-  
+
       if (!response.items || response.items.length === 0) {
         throw new Error('No tracks found in the playlist.');
       }
-  
+
       const tracks = response.items.map(item => ({
         name: `${item.track.name} by ${item.track.artists[0].name}`,
         id: item.track.id,
@@ -524,8 +550,7 @@ const FacialExpressionDetection = () => {
         external_url: item.track.external_urls.spotify,
         album: item.track.album
       }));
-  
-      // Only update if we're still dealing with the same playlist
+
       if (createdPlaylistId === playlistId) {
         setPlaylistTracks(tracks);
       }
@@ -542,27 +567,18 @@ const FacialExpressionDetection = () => {
     }
   }, [token, createdPlaylistId]);
 
-  // Debounce the fetchPlaylistTracks function to prevent multiple simultaneous calls
   const debouncedFetchPlaylistTracks = useMemo(
-    () => {
-      const debounced = debounce((playlistId) => {
-        if (playlistId) {
-          fetchPlaylistTracks(playlistId);
-        }
-      }, 500);
-      
-      // Cancel any pending debounce on unmount
-      return debounced;
-    },
+    () => debounce((playlistId) => {
+      if (playlistId) {
+        fetchPlaylistTracks(playlistId);
+      }
+    }, 500),
     [fetchPlaylistTracks]
   );
 
   useEffect(() => {
     if (createdPlaylistId) {
-      const fetchTracks = async () => {
-        await fetchPlaylistTracks(createdPlaylistId);
-      };
-      fetchTracks();
+      fetchPlaylistTracks(createdPlaylistId);
     }
   }, [createdPlaylistId, fetchPlaylistTracks]);
 
@@ -571,31 +587,28 @@ const FacialExpressionDetection = () => {
       console.log('No tracks to save or not logged in.');
       return;
     }
-  
+
     setLoading(true);
     setPlaylistTracks([]);
-    setCreatedPlaylistId(null); // Reset playlist ID
+    setCreatedPlaylistId(null);
     setFetchError(null);
-    
+
     try {
       const user = await spotifyApi.getMe();
       const userId = user.id;
-  
+
       const finalPlaylistName = playlistName.trim() || `MoodTunes - ${mood} Playlist (${new Date().toLocaleDateString()})`;
-  
+
       const playlist = await spotifyApi.createPlaylist(userId, {
         name: finalPlaylistName,
         description: `A playlist created by MoodTunes based on your ${mood} mood.`,
         public: false,
       });
-      
+
       const playlistId = playlist.id;
       const trackUris = suggestions.music.map((track) => `spotify:track:${track.id}`);
       await spotifyApi.addTracksToPlaylist(playlistId, trackUris);
-  
-      console.log('Playlist saved to Spotify! Playlist ID:', playlistId);
-      
-      // Update state and fetch tracks in sequence
+
       setCreatedPlaylistId(playlistId);
       await fetchPlaylistTracks(playlistId);
     } catch (error) {
@@ -646,11 +659,12 @@ const FacialExpressionDetection = () => {
     setFetchError(null);
     setCapturedImage(null);
     setExpressionScores({});
+    setDetectionError(null);
     if (audioRef.current) {
       audioRef.current.pause();
     }
     startVideo();
-  }, [setToken, setSuggestions, setPlayingTrackId, setCreatedPlaylistId, setPlaylistTracks, setCapturedImage, setExpressionScores, startVideo]);
+  }, [startVideo]);
 
   const togglePlay = useCallback(
     async (track) => {
@@ -658,27 +672,22 @@ const FacialExpressionDetection = () => {
         console.log('No preview available for this track.');
         return;
       }
-  
+
       try {
-        // If clicking the same track that's playing, pause it
         if (playingTrackId === track.id) {
           audioRef.current.pause();
           setPlayingTrackId(null);
           return;
         }
-  
-        // If a different track is playing, stop it first
+
         if (playingTrackId) {
           audioRef.current.pause();
         }
-  
-        // Load the new track
+
         audioRef.current.src = track.preview_url;
-        audioRef.current.load(); // Ensure the new source is loaded
-  
-        // Attempt to play
+        audioRef.current.load();
+
         const playPromise = audioRef.current.play();
-        
         if (playPromise !== undefined) {
           await playPromise
             .then(() => {
@@ -686,8 +695,7 @@ const FacialExpressionDetection = () => {
             })
             .catch(error => {
               console.error('Playback failed:', error);
-              // Show user feedback that interaction is needed
-              alert('Please click the play button again to start playback. Some browsers require this.');
+              alert('Please click the play button again to start playback.');
             });
         }
       } catch (error) {
@@ -701,19 +709,20 @@ const FacialExpressionDetection = () => {
   const openInSpotify = useCallback((url) => {
     if (url) {
       window.open(url, '_blank');
-    } else {
-      console.log('Spotify link not available for this track.');
     }
   }, []);
 
-  const moodColor = {
-    Happy: 'bg-green-500',
-    Sad: 'bg-blue-500',
-    Angry: 'bg-red-500',
-    Neutral: 'bg-gray-500',
-    Fearful: 'bg-purple-500',
-    Surprised: 'bg-orange-500',
-  };
+  const moodColor = useMemo(() => {
+    const colors = [
+      'bg-green-500', 'bg-blue-500', 'bg-red-500', 'bg-gray-500', 
+      'bg-purple-500', 'bg-orange-500', 'bg-teal-500', 'bg-pink-500'
+    ];
+    const moodColorMap = {};
+    moodOptions.forEach((mood, index) => {
+      moodColorMap[mood] = colors[index % colors.length];
+    });
+    return moodColorMap;
+  }, [moodOptions]);
 
   return (
     <section
@@ -777,7 +786,6 @@ const FacialExpressionDetection = () => {
         )}
 
         <div className={`mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 ${isVisible ? 'animate-slide-up' : 'opacity-0'}`} style={{ animationDelay: '400ms' }}>
-          {/* Camera Feed / Captured Image */}
           <div className="bg-white/80 backdrop-blur-md shadow-md rounded-lg p-6 transition-all duration-300 hover:shadow-xl">
             <h3 className="text-xl font-semibold text-white bg-gradient-to-r from-purple-600 to-indigo-600 p-3 rounded-t-lg -mx-6 -mt-6 mb-4">
               {capturedImage ? 'Captured Image' : 'Camera Feed'}
@@ -795,7 +803,7 @@ const FacialExpressionDetection = () => {
                     autoPlay
                     muted
                     playsInline
-                    className="w-full h-auto rounded-lg transform scale-x-[-1]" // This flips the video horizontally
+                    className="w-full h-auto rounded-lg transform scale-x-[-1]"
                     style={{ display: cameraError ? 'none' : 'block' }}
                   />
                   {cameraError && (
@@ -810,12 +818,25 @@ const FacialExpressionDetection = () => {
                       </button>
                     </div>
                   )}
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute top-0 left-0 w-full h-full"
-                    style={{ display: cameraError ? 'none' : 'block' }}
+                  <canvas 
+                    ref={canvasRef} 
+                    className="absolute top-0 left-0" 
+                    style={{ width: '100%', height: 'auto', maxWidth: '100%', objectFit: 'contain' }} 
                   />
                 </>
+              )}
+              {detectionError && capturedImage && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+                  <div className="text-center text-white p-4">
+                    <p className="text-red-400 mb-2">{detectionError}</p>
+                    <button
+                      onClick={retakePicture}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 rounded-full font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                    >
+                      Retake Picture
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
             <div className="flex gap-4 mt-4">
@@ -837,7 +858,7 @@ const FacialExpressionDetection = () => {
               )}
               <button
                 onClick={() => fetchSuggestions(mood.toLowerCase())}
-                disabled={loading || !token || !capturedImage}
+                disabled={loading || !token || !capturedImage || detectionError || mood === 'Unknown'}
                 className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 px-6 py-2 rounded-full font-semibold hover:from-yellow-500 hover:to-orange-500 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(251,191,36,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Refresh Suggestions
@@ -845,14 +866,13 @@ const FacialExpressionDetection = () => {
             </div>
           </div>
 
-          {/* Detection Results */}
           <div className="bg-white/80 backdrop-blur-md shadow-md rounded-lg p-6 transition-all duration-300 hover:shadow-xl">
             <div className="flex justify-between items-center bg-gradient-to-r from-purple-600 to-indigo-600 p-3 rounded-t-lg -mx-6 -mt-6 mb-4">
               <h3 className="text-xl font-semibold text-white">Detection Results</h3>
               <div className="relative w-32">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  disabled={!token || cameraError}
+                  disabled={!token || cameraError || moodOptions.length === 0}
                   className="w-full flex items-center justify-between bg-white/20 text-white px-4 py-2 rounded-full text-left font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>{mood}</span>
@@ -886,7 +906,7 @@ const FacialExpressionDetection = () => {
               <div className="grid grid-cols-1 gap-2">
                 <div className="flex justify-between items-center border-b pb-2">
                   <span className="font-medium text-gray-700">Mood:</span>
-                  <span className={`inline-block px-3 py-1 rounded-full text-white ${moodColor[mood]}`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-white ${moodColor[mood] || 'bg-gray-500'}`}>
                     {mood}
                   </span>
                 </div>
@@ -915,6 +935,22 @@ const FacialExpressionDetection = () => {
                         </div>
                         <span className="text-gray-600">{score}%</span>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {moodToGenres[mood.toLowerCase()] && mood !== 'Unknown' && (
+                <div className="mt-4">
+                  <h4 className="text-lg font-semibold text-gray-800">Genres for {mood} Mood</h4>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {moodToGenres[mood.toLowerCase()].map((genre, index) => (
+                      <span
+                        key={index}
+                        className="inline-block px-3 py-1 bg-gradient-to-r from-purple-200 to-indigo-200 text-gray-800 rounded-full text-sm font-medium transition-all duration-300 hover:from-purple-300 hover:to-indigo-300 hover:shadow-md"
+                      >
+                        {genre}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -1155,7 +1191,6 @@ const FacialExpressionDetection = () => {
           </div>
         )}
 
-        {/* Modal for Playlist Name Input */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
@@ -1192,47 +1227,26 @@ const FacialExpressionDetection = () => {
 
       <style jsx>{`
         @keyframes wave {
-          0% {
-            transform: translateX(0);
-          }
-          50% {
-            transform: translateX(-25%);
-          }
-          100% {
-            transform: translateX(0);
-          }
+          0% { transform: translateX(0); }
+          50% { transform: translateX(-25%); }
+          100% { transform: translateX(0); }
         }
         .animate-wave {
           animation: wave 20s ease-in-out infinite;
         }
 
         @keyframes float {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateY(-20px) rotate(10deg);
-            opacity: 0.8;
-          }
-          100% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 0.5;
-          }
+          0% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+          50% { transform: translateY(-20px) rotate(10deg); opacity: 0.8; }
+          100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
         }
         .animate-float {
           animation: float 6s ease-in-out infinite;
         }
 
         @keyframes slide-up {
-          0% {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
         .animate-slide-up {
           animation: slide-up 0.8s ease-out forwards;
