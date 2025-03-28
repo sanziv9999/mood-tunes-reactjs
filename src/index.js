@@ -1,14 +1,20 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import '@ant-design/v5-patch-for-react-19';
 
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+import reportWebVitals from './reportWebVitals';// Your Login component
+import Login from './pages/Auth/Login';
+import Users from './pages/user/Users';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <App>
+      <Login />
+      <Users />
+    </App>
   </React.StrictMode>
 );
 
