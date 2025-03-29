@@ -48,7 +48,7 @@ function CustomHeader() {
         <Link to="/" className="flex items-center gap-2 group">
           <Music className="h-6 w-6 sm:h-8 sm:w-8 text-white transition-transform duration-300 group-hover:scale-110" />
           <span className="text-xl sm:text-2xl font-extrabold text-white tracking-tight transition-colors duration-300 group-hover:text-yellow-300">
-            MoodTunes
+            MoodSync
           </span>
         </Link>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Smartphone, Apple } from 'lucide-react';
-
+import playlistImg from '../assets/images/playlist.png';
 function Download() {
   return (
     <section
@@ -39,7 +39,7 @@ function Download() {
           {/* Text Content */}
           <div className="space-y-6 animate-fade-in-up">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
-              Get MoodTunes Today
+              Get MoodSync Today
             </h2>
             <p className="text-lg md:text-xl text-gray-600 max-w-md leading-relaxed">
               Available for iOS and Android—immerse yourself in mood-driven music now.
@@ -72,8 +72,8 @@ function Download() {
             <div className="group relative transform transition-all duration-500 hover:rotate-3 hover:scale-105">
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-md"></div>
               <img
-                src="https://via.placeholder.com/300x500"
-                alt="MoodTunes App"
+                src={playlistImg}
+                alt="MoodSync App"
                 className="rounded-xl shadow-2xl max-w-full h-auto object-cover border border-purple-100 relative z-10"
               />
               {/* Floating Badge */}

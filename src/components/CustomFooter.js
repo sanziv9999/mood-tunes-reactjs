@@ -51,7 +51,7 @@ function CustomFooter() {
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
               </svg>
               <span className="text-2xl font-bold tracking-tight text-white">
-                MoodTunes
+                MoodSync
               </span>
             </Link>
             <p className="text-sm text-gray-300  leading-relaxed max-w-xs">
@@ -59,9 +59,9 @@ function CustomFooter() {
             </p>
             <div className="flex gap-6">
               {[
-                { href: 'https://facebook.com/moodtunes', icon: <Facebook className="h-5 w-5" />, label: 'Facebook' },
-                { href: 'https://twitter.com/moodtunes', icon: <Twitter className="h-5 w-5" />, label: 'Twitter' },
-                { href: 'https://instagram.com/moodtunes', icon: <Instagram className="h-5 w-5" />, label: 'Instagram' },
+                { href: 'https://facebook.com/MoodSync', icon: <Facebook className="h-5 w-5" />, label: 'Facebook' },
+                { href: 'https://twitter.com/MoodSync', icon: <Twitter className="h-5 w-5" />, label: 'Twitter' },
+                { href: 'https://instagram.com/MoodSync', icon: <Instagram className="h-5 w-5" />, label: 'Instagram' },
               ].map((social) => (
                 <a
                   key={social.label}
@@ -69,7 +69,7 @@ function CustomFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-purple-500 transform transition-all duration-300 hover:scale-110 group relative"
-                  aria-label={`Visit MoodTunes on ${social.label}`}
+                  aria-label={`Visit MoodSync on ${social.label}`}
                 >
                   {social.icon}
                   <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
@@ -153,9 +153,9 @@ function CustomFooter() {
           className="mt-12 text-center text-sm text-gray-400 animate-fade-in-up border-t border-gray-700/50 pt-6"
           style={{ animationDelay: '800ms' }}
         >
-          © {new Date().getFullYear()} MoodTunes. All rights reserved.
+          © {new Date().getFullYear()} MoodSync. All rights reserved.
           <span className="block mt-2 text-xs opacity-75">
-            Crafted with <Heart className="inline h-4 w-4 text-purple-500 animate-pulse" /> by the MoodTunes Team
+            Crafted with <Heart className="inline h-4 w-4 text-purple-500 animate-pulse" /> by the MoodSync Team
           </span>
         </div>
       </div>

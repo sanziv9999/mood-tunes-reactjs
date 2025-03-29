@@ -1,5 +1,8 @@
 import React from 'react';
 import { Star, Quote } from 'lucide-react';
+import user1 from '../assets/images/user1.png';
+import user2 from '../assets/images/user2.jpg';
+import user3 from '../assets/images/user3.webp';
 
 function Testimonials() {
   return (
@@ -38,7 +41,7 @@ function Testimonials() {
             Voices of Our Community
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Hear how MoodTunes resonates with souls across the globe.
+            Hear how MoodSync resonates with souls across the globe.
           </p>
         </div>
 
@@ -47,21 +50,21 @@ function Testimonials() {
           {[
             {
               name: 'Emma S.',
-              image: 'https://via.placeholder.com/60',
+              image: {user3},
               rating: 5,
-              quote: 'MoodTunes nails it every time—my emotions in perfect harmony!',
+              quote: 'MoodSync nails it every time—my emotions in perfect harmony!',
               role: 'Music Enthusiast',
             },
             {
-              name: 'Liam R.',
-              image: 'https://via.placeholder.com/60',
+              name: 'Deain B.',
+              image: {user2},
               rating: 5,
               quote: 'It’s like a personal DJ that feels my vibe—pure genius!',
               role: 'Creative Soul',
             },
             {
-              name: 'Sophie K.',
-              image: 'https://via.placeholder.com/60',
+              name: 'Rehan P.',
+              image: {user1},
               rating: 4,
               quote: 'Mood detection that’s uncanny, playlists that enchant.',
               role: 'Daily Listener',
@@ -78,7 +81,7 @@ function Testimonials() {
               {/* User Info */}
               <div className="flex items-center gap-4 mb-4">
                 <img
-                  src={testimonial.image}
+                  src={user3}
                   alt={`${testimonial.name}'s avatar`}
                   className="w-14 h-14 rounded-full border-2 border-purple-600 transform transition-all duration-300 group-hover:scale-110 group-hover:border-indigo-600 object-cover"
                 />

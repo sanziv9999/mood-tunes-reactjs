@@ -1,5 +1,5 @@
 import React from 'react';
-
+import heroImage from '../assets/images/hero.png';
 function Hero() {
   return (
     <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-br from-gray-50 via-indigo-50 to-purple-50 overflow-hidden relative">
@@ -47,7 +47,7 @@ function Hero() {
             <div className="relative flex items-center justify-center group perspective-1000">
               <div className="relative transform transition-all duration-500 group-hover:rotate-3 group-hover:scale-105">
                 <img
-                  src=""
+                  src={heroImage}
                   alt="MoodTunes Preview"
                   className="rounded-xl max-w-full h-auto shadow-2xl object-cover border border-purple-100"
                 />
