@@ -12,12 +12,11 @@ import {
   CameraOutlined,
   SmileOutlined,
   SoundOutlined
-
 } from '@ant-design/icons';
 import { Button, Layout, Menu, theme, Avatar, Badge, Dropdown, Space, Typography, Divider } from 'antd';
 import { UserContext } from '../context/user.context';
 import { setSuccessMessage, setErrorMessage } from '../utils/toastify.util';
-import '../assets/css/CustomLayout.css'; // Create this CSS file for custom styles
+import '../assets/css/CustomLayout.css';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -62,11 +61,14 @@ const CustomLayout = () => {
     try {
       localStorage.setItem('isAuthenticated', 'false');
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       setUser(null);
       setSuccessMessage('Logged out successfully');
-      navigate('/login');
+      navigate('/login', { replace: true }); // Navigate to login with replace
+      setTimeout(() => window.location.reload(), 100); // Reload after navigation
     } catch (error) {
       setErrorMessage('Failed to logout. Please try again.');
+      console.error('Logout error:', error);
     }
   };
 

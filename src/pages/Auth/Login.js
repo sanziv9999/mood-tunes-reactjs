@@ -29,6 +29,7 @@ const Login = () => {
   
     } catch (error) {
       console.error('Login error:', error);
+      localStorage.setItem('isAuthenticated', 'false');
       
       // Handle specific error messages
       if (error.message.includes('invalid credentials')) {
