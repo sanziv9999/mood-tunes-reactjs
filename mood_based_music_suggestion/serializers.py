@@ -7,10 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class SuggestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Suggestion
-        fields = ['mood', 'music', 'activity', 'relaxation']
+
 
 class MoodSerializer(serializers.ModelSerializer):
     class Meta:
@@ -48,9 +45,9 @@ class CapturedImageSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        # Get the user from the request context
-        user = self.context['request'].user
-        if user.is_authenticated:
+        # Get the user from the request context if available
+        user = self.context['request'].user if hasattr(self.context['request'], 'user') else None
+        if user and user.is_authenticated:
             validated_data['user'] = user
         return super().create(validated_data)
 
@@ -138,3 +135,9 @@ class SignupSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, write_only=True)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'username',]

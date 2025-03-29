@@ -1,6 +1,6 @@
 from rest_framework import generics
 from rest_framework.response import Response
-from .models import Suggestion
+
 from rest_framework import status
 from .serializers import *
 from rest_framework.views import APIView
@@ -13,6 +13,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import BasePermission
+from rest_framework import generics, permissions
 
 class IsNotSuperuser(BasePermission):
     def has_permission(self, request, view):
@@ -89,10 +90,7 @@ class AdminLoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-class SuggestionDetail(generics.RetrieveAPIView):
-    queryset = Suggestion.objects.all()
-    serializer_class = SuggestionSerializer
-    lookup_field = 'mood'
+
 
 class MoodListView(generics.ListAPIView):
     queryset = Mood.objects.all()
@@ -124,17 +122,7 @@ class CapturedImageListView(generics.ListAPIView):
     queryset = CapturedImage.objects.all().order_by('-captured_at')  # Order by latest first
     serializer_class = CapturedImageSerializer
 
-# Suggestion CRUD Views
-class SuggestionListCreate(generics.ListCreateAPIView):
-    queryset = Suggestion.objects.all()
-    serializer_class = SuggestionSerializer
-    # permission_classes = [IsAuthenticated]
 
-class SuggestionRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Suggestion.objects.all()
-    serializer_class = SuggestionSerializer
-    lookup_field = 'mood'
-    # permission_classes = [IsAuthenticated]
 
 # Mood CRUD Views
 class MoodListCreate(generics.ListCreateAPIView):
@@ -171,13 +159,16 @@ class MoodGenreRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class CapturedImageListCreate(generics.ListCreateAPIView):
     queryset = CapturedImage.objects.all().order_by('-captured_at')
     serializer_class = CapturedImageSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 class CapturedImageRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = CapturedImage.objects.all()
     serializer_class = CapturedImageSerializer
     parser_classes = (MultiPartParser, FormParser)
-    authentication_classes = [TokenAuthentication]
+    # authentication_classes = [TokenAuthentication]
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def perform_update(self, serializer):
         # Get the existing image instance
@@ -275,3 +266,104 @@ class LoginView(APIView):
                 }, status=status.HTTP_200_OK)
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class UserList(generics.ListAPIView):
+    queryset = CustomUser.objects.filter(is_staff=False)  # Exclude admin users
+    serializer_class = UserSerializer
+   
+
+class UserDetail(generics.RetrieveUpdateAPIView):  # Allows GET, PUT, PATCH
+    queryset = CustomUser.objects.filter(is_staff=False)
+    serializer_class = UserSerializer
+
+from django.db.models import Count
+from django.utils import timezone
+from datetime import timedelta
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        time_range = request.query_params.get('range', 'week')
+        
+        # Calculate time delta based on range
+        if time_range == 'day':
+            delta = timedelta(days=1)
+        elif time_range == 'week':
+            delta = timedelta(weeks=1)
+        elif time_range == 'month':
+            delta = timedelta(days=30)
+        elif time_range == 'year':
+            delta = timedelta(days=365)
+        else:
+            delta = timedelta(weeks=1)
+        
+        now = timezone.now()
+        start_date = now - delta
+        
+        # Get counts
+        total_users = CustomUser.objects.filter(is_staff=False).count()
+        total_moods = Mood.objects.count()
+        total_images = CapturedImage.objects.count()
+        total_activity_suggestions = ActivitySuggestion.objects.count()
+        total_relaxation_activities = RelaxationActivity.objects.count()
+        
+        # Calculate changes
+        prev_users = CustomUser.objects.filter(
+            is_staff=False,
+            date_joined__lt=start_date
+        ).count()
+        user_change_percent = ((total_users - prev_users) / prev_users * 100) if prev_users else 0
+        
+        prev_images = CapturedImage.objects.filter(
+            captured_at__lt=start_date
+        ).count()
+        image_change_percent = ((total_images - prev_images) / prev_images * 100) if prev_images else 0
+        
+        return Response({
+            'total_users': total_users,
+            'total_moods': total_moods,
+            'total_images': total_images,
+            'total_activity_suggestions': total_activity_suggestions,
+            'total_relaxation_activities': total_relaxation_activities,
+            'user_change_percent': user_change_percent,
+            'image_change_percent': image_change_percent
+        })
+class TopMoodsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        limit = int(request.query_params.get('limit', 5))
+        
+        top_moods = CapturedImage.objects.values('mood') \
+            .annotate(count=Count('mood')) \
+            .order_by('-count')[:limit]
+        
+        return Response([
+            {'name': mood['mood'], 'count': mood['count']}
+            for mood in top_moods
+        ])
+
+class UserActivityView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        limit = int(request.query_params.get('limit', 5))
+        
+        # Get recent image captures as activity
+        recent_activity = CapturedImage.objects.select_related('user') \
+            .order_by('-captured_at')[:limit]
+        
+        return Response([
+            {
+                'user': {
+                    'username': img.user.username if img.user else 'Anonymous',
+                    'avatar': None  # Add if you have user avatars
+                },
+                'action': 'Image captured',
+                'mood': img.mood,
+                'timestamp': img.captured_at
+            }
+            for img in recent_activity
+        ])

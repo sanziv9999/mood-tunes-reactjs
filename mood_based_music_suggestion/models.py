@@ -3,14 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import BaseUserManager
 
-class Suggestion(models.Model):
-    mood = models.CharField(max_length=20, unique=True)
-    music = models.CharField(max_length=100)
-    activity = models.CharField(max_length=100)
-    relaxation = models.CharField(max_length=100)
 
-    def __str__(self):
-        return self.mood
     
 class Mood(models.Model):
     name = models.CharField(max_length=50, unique=True)
