@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import * as faceapi from 'face-api.js';
 import SpotifyWebApi from 'spotify-web-api-js';
 import { debounce } from 'lodash';
-
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 const FacialExpressionDetection = () => {
   // Refs
   const videoRef = useRef(null);
@@ -489,17 +490,30 @@ const FacialExpressionDetection = () => {
 
   // Take picture from video stream
   const snapPicture = useCallback(async () => {
-    if (!token || cameraError) return;
+    // First check if Spotify token is available
+    if (!token) {
+      toast.info('Please login to Spotify first to save your mood analysis', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      return;
+    }
   
+    if (cameraError) return;
+    
     setLoading(true);
     const video = videoRef.current;
     const canvas = capturedCanvasRef.current;
-  
+    
     if (!video || !canvas) {
       setLoading(false);
       return;
     }
-  
+    
     const displaySize = {
       width: video.videoWidth || 640,
       height: video.videoHeight || 480,
@@ -516,46 +530,82 @@ const FacialExpressionDetection = () => {
   
     stopVideo();
     const detectedMood = await detectExpression(imageDataUrl);
+
+    if (detectedMood === 'Unknown' || token == null) {
+      toast.warn('Could not detect a clear mood. Please try again with a different expression.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      setLoading(false);
+      return;
+    }
     
     // Get user data from localStorage
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = userData.id;
   
-    const formData = new FormData();
-    const blob = await fetch(imageDataUrl).then(res => res.blob());
-    formData.append('image', blob, `captured_image_${Date.now()}.jpg`);
-    formData.append('mood', detectedMood);
-  
-    // Only append user if logged in
-    if (userId) {
+    // Only proceed with saving if we have both Spotify token and user is logged in
+    if (token && userId) {
+      const formData = new FormData();
+      const blob = await fetch(imageDataUrl).then(res => res.blob());
+      formData.append('image', blob, `captured_image_${Date.now()}.jpg`);
+      formData.append('mood', detectedMood);
       formData.append('user', userId);
+  
+      try {
+        const response = await fetch('http://localhost:8000/api/captured-images/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to save image');
+        }
+        
+        const result = await response.json();
+        toast.success('Image saved successfully!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        console.log('Image saved successfully:', result);
+      } catch (error) {
+        console.error('Error saving image:', error);
+        if (error.message.includes('Authentication credentials were not provided')) {
+          toast.error('Please login to save your images', {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+      }
+    } else {
+      toast.error('Failed to save image. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      console.log('Not saving image - missing Spotify token or user not logged in');
     }
   
-    try {
-      const response = await fetch('http://localhost:8000/api/captured-images/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to save image');
-      }
-      
-      const result = await response.json();
-      console.log('Image saved successfully:', result);
-    } catch (error) {
-      console.error('Error saving image:', error);
-      // Handle the case where the user is not authenticated
-      if (error.message.includes('Authentication credentials were not provided')) {
-        alert('Please login to save your images');
-      }
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }, [token, cameraError, detectExpression, stopVideo]);
 
   // Retake picture
@@ -797,6 +847,18 @@ const FacialExpressionDetection = () => {
       ref={sectionRef}
       className="w-full min-h-screen py-8 md:py-12 lg:py-16 xl:py-20 bg-gradient-to-br from-gray-50 via-indigo-50 to-purple-50 relative overflow-hidden flex items-center justify-center"
     >
+      {/* Toast container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       {/* Background elements */}
       <div className="absolute inset-0 overflow-hidden opacity-10 animate-wave">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
@@ -914,12 +976,12 @@ const FacialExpressionDetection = () => {
                 </button>
               ) : (
                 <button
-                  onClick={snapPicture}
-                  disabled={loading || !token || cameraError}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)] disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-                >
-                  {loading ? 'Processing...' : 'Snap Picture'}
-                </button>
+                onClick={snapPicture}
+                disabled={loading || !token || cameraError}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)] disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                {loading ? 'Processing...' : 'Snap Picture'}
+              </button>
               )}
               <button
                 onClick={() => fetchSuggestions(mood.toLowerCase())}

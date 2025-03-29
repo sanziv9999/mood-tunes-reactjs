@@ -27,6 +27,7 @@ function CustomHeader() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
 
   const handleLogout = () => {
+    window.localStorage.removeItem("Authtoken");
     window.localStorage.removeItem("token");
     window.localStorage.removeItem("user");
     window.location.href = "/";

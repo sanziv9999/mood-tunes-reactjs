@@ -10,7 +10,7 @@ import Testimonials from './components/Testimonials';
 import Download from './components/Download';
 import CustomFooter from './components/CustomFooter';
 import FacialExpressionDetection from './components/FacialExpressionDetection'; // Added FacialExpressionDetection
-import MuiscSuggestion from './components/MuiscSuggestion';
+import CapturedExpression from './components/CapturedExpression';
 
 
 // Layout component for all pages (with header and footer)
@@ -58,8 +58,8 @@ function App() {
                 // </ProtectedRoute>
               }
             />
-            {/* <Route path='/facial-expression-detection' element={ <MuiscSuggestion />}
-            /> */}
+            <Route path='/captured-expression' element={ <CapturedExpression />}
+            /> 
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
