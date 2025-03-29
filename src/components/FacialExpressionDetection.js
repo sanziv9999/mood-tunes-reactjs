@@ -27,7 +27,6 @@ const FacialExpressionDetection = () => {
   const [playlistName, setPlaylistName] = useState('');
   const [isFetchingTracks, setIsFetchingTracks] = useState(false);
   const [fetchError, setFetchError] = useState(null);
-  const [detectionError, setDetectionError] = useState(null); // New state for detection errors
 
   const spotifyApi = useMemo(() => new SpotifyWebApi(), []);
 
@@ -50,7 +49,17 @@ const FacialExpressionDetection = () => {
           mood.name.charAt(0).toUpperCase() + mood.name.slice(1)
         );
         setMoodOptions(capitalizedMoods);
-        setMood('Unknown'); // Initial mood is 'Unknown'
+        setMood('Unknown'); // Initial mood is always "Unknown"
+
+        const genresResponse = await fetch('http://localhost:8000/api/mood-genres/');
+        if (!genresResponse.ok) throw new Error('Failed to fetch mood genres');
+        const genresData = await genresResponse.json();
+        const moodGenreMap = genresData.reduce((acc, item) => {
+          const moodName = item.mood.name.toLowerCase();
+          acc[moodName] = item.genres;
+          return acc;
+        }, {});
+        setMoodToGenres(moodGenreMap);
       } catch (error) {
         console.error('Error fetching moods or genres:', error);
         setMoodOptions([]);
@@ -154,7 +163,6 @@ const FacialExpressionDetection = () => {
         startVideo();
       } catch (error) {
         console.error('Error loading models:', error);
-        setDetectionError('Failed to load face detection models. Please refresh the page.');
       }
     };
     loadModels();
@@ -171,6 +179,12 @@ const FacialExpressionDetection = () => {
         return;
       }
 
+      if (mood === 'unknown') {
+        setSuggestions({ music: [], activity: '', relaxation: '' });
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       let selectedGenre = '';
       const moodLower = mood.toLowerCase();
@@ -178,7 +192,6 @@ const FacialExpressionDetection = () => {
       let activitySuggestion = 'Explore local culture'; // Default fallback
       let relaxationActivity = 'Take a moment to relax'; // Default fallback
 
-      // Fetch activity and relaxation suggestions
       try {
         const activityResponse = await fetch('http://localhost:8000/api/activity-suggestions/');
         if (!activityResponse.ok) throw new Error('Failed to fetch activity suggestions');
@@ -359,81 +372,75 @@ const FacialExpressionDetection = () => {
         const originalWidth = img.width;
         const originalHeight = img.height;
 
-        // Adjust TinyFaceDetectorOptions for better detection
         const detections = await faceapi
-          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 }))
+          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
           .withFaceLandmarks()
           .withFaceExpressions()
           .withAgeAndGender();
 
-        if (detections.length === 0) {
-          // No face detected
-          setDetectionError('No face detected. Please ensure your face is visible and well-lit, then retake the picture.');
-          return null;
-        }
-
-        const { expressions, gender: detectedGender, age: detectedAge } = detections[0];
-        const maxExpression = Object.keys(expressions).reduce((a, b) =>
-          expressions[a] > expressions[b] ? a : b
-        );
-
-        // Check if the highest expression score is too low (e.g., below 0.5)
-        if (expressions[maxExpression] < 0.5) {
-          setDetectionError('Expression detection confidence is too low. Please try a clearer expression or better lighting, then retake the picture.');
-          return null;
-        }
-
-        const newMood = maxExpression.charAt(0).toUpperCase() + maxExpression.slice(1);
-        const newGender = detectedGender;
-        const newAge = Math.round(detectedAge);
-
-        const scores = {};
-        Object.keys(expressions).forEach((exp) => {
-          scores[exp.charAt(0).toUpperCase() + exp.slice(1)] = (expressions[exp] * 100).toFixed(2);
-        });
-        setExpressionScores(scores);
-
-        const validMood = moodOptions.includes(newMood) ? newMood : null;
-        if (!validMood) {
-          setDetectionError('Detected mood is not supported. Please try a different expression or retake the picture.');
-          return null;
-        }
-
-        setMood(validMood);
-        setGender(newGender);
-        setAge(newAge);
-        setDetectionError(null); // Clear any previous detection errors
-
         const canvas = canvasRef.current;
         canvas.width = originalWidth;
         canvas.height = originalHeight;
-
         const context = canvas.getContext('2d');
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        const resizedDetections = faceapi.resizeResults(detections, { 
-          width: originalWidth, 
-          height: originalHeight 
-        });
+        if (detections.length > 0) {
+          const { expressions, gender: detectedGender, age: detectedAge } = detections[0];
+          const maxExpression = Object.keys(expressions).reduce((a, b) =>
+            expressions[a] > expressions[b] ? a : b
+          );
+          const newMood = maxExpression.charAt(0).toUpperCase() + maxExpression.slice(1);
 
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
-        faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+          const scores = {};
+          Object.keys(expressions).forEach((exp) => {
+            scores[exp.charAt(0).toUpperCase() + exp.slice(1)] = (expressions[exp] * 100).toFixed(2);
+          });
+          setExpressionScores(scores);
 
-        resizedDetections.forEach((detection) => {
-          const box = detection.detection.box;
-          const text = `${detection.gender}, ${Math.round(detection.age)} years`;
-          const drawBox = new faceapi.draw.DrawTextField([text], box.topLeft);
-          drawBox.draw(canvas);
-        });
+          const validMood = moodOptions.includes(newMood) ? newMood : 'Unknown';
+          setMood(validMood);
+          setGender(detectedGender);
+          setAge(Math.round(detectedAge));
 
-        fetchSuggestions(validMood.toLowerCase());
-        return validMood;
+          const resizedDetections = faceapi.resizeResults(detections, { 
+            width: originalWidth, 
+            height: originalHeight 
+          });
+
+          faceapi.draw.drawDetections(canvas, resizedDetections);
+          faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+          faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+
+          resizedDetections.forEach((detection) => {
+            const box = detection.detection.box;
+            const text = `${detection.gender}, ${Math.round(detection.age)} years`;
+            const drawBox = new faceapi.draw.DrawTextField([text], box.topLeft);
+            drawBox.draw(canvas);
+          });
+
+          if (validMood !== 'Unknown') {
+            fetchSuggestions(validMood.toLowerCase());
+          } else {
+            setSuggestions({ music: [], activity: '', relaxation: '' });
+          }
+          return validMood;
+        } else {
+          setMood('Unknown');
+          setGender('');
+          setAge(null);
+          setExpressionScores({});
+          setSuggestions({ music: [], activity: '', relaxation: '' });
+          return 'Unknown';
+        }
       } catch (error) {
         console.error('Detection error:', error);
-        setDetectionError('An error occurred during face detection. Please retake the picture.');
-        return null;
+        setMood('Unknown');
+        setGender('');
+        setAge(null);
+        setExpressionScores({});
+        setSuggestions({ music: [], activity: '', relaxation: '' });
+        return 'Unknown';
       } finally {
         setLoading(false);
       }
@@ -445,13 +452,11 @@ const FacialExpressionDetection = () => {
     if (!token || cameraError) return;
 
     setLoading(true);
-    setDetectionError(null); // Clear previous detection errors
     const video = videoRef.current;
     const canvas = capturedCanvasRef.current;
 
     if (!video || !canvas) {
       setLoading(false);
-      setDetectionError('Camera or canvas not available. Please refresh the page and try again.');
       return;
     }
 
@@ -471,12 +476,6 @@ const FacialExpressionDetection = () => {
 
     stopVideo();
     const detectedMood = await detectExpression(imageDataUrl);
-
-    if (!detectedMood) {
-      // Detection failed, do not save the image or proceed
-      setLoading(false);
-      return;
-    }
 
     const formData = new FormData();
     const blob = await fetch(imageDataUrl).then(res => res.blob());
@@ -509,7 +508,6 @@ const FacialExpressionDetection = () => {
     setCreatedPlaylistId(null);
     setPlaylistTracks([]);
     setFetchError(null);
-    setDetectionError(null); // Clear detection error
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -659,7 +657,6 @@ const FacialExpressionDetection = () => {
     setFetchError(null);
     setCapturedImage(null);
     setExpressionScores({});
-    setDetectionError(null);
     if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -717,7 +714,7 @@ const FacialExpressionDetection = () => {
       'bg-green-500', 'bg-blue-500', 'bg-red-500', 'bg-gray-500', 
       'bg-purple-500', 'bg-orange-500', 'bg-teal-500', 'bg-pink-500'
     ];
-    const moodColorMap = {};
+    const moodColorMap = { Unknown: 'bg-gray-500' };
     moodOptions.forEach((mood, index) => {
       moodColorMap[mood] = colors[index % colors.length];
     });
@@ -825,19 +822,6 @@ const FacialExpressionDetection = () => {
                   />
                 </>
               )}
-              {detectionError && capturedImage && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-                  <div className="text-center text-white p-4">
-                    <p className="text-red-400 mb-2">{detectionError}</p>
-                    <button
-                      onClick={retakePicture}
-                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 rounded-full font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                    >
-                      Retake Picture
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
             <div className="flex gap-4 mt-4">
               {capturedImage ? (
@@ -858,7 +842,7 @@ const FacialExpressionDetection = () => {
               )}
               <button
                 onClick={() => fetchSuggestions(mood.toLowerCase())}
-                disabled={loading || !token || !capturedImage || detectionError || mood === 'Unknown'}
+                disabled={loading || !token || !capturedImage || mood === 'Unknown'}
                 className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 px-6 py-2 rounded-full font-semibold hover:from-yellow-500 hover:to-orange-500 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_10px_rgba(251,191,36,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Refresh Suggestions
@@ -940,7 +924,7 @@ const FacialExpressionDetection = () => {
                 </div>
               )}
 
-              {moodToGenres[mood.toLowerCase()] && mood !== 'Unknown' && (
+              {mood !== 'Unknown' && moodToGenres[mood.toLowerCase()] && (
                 <div className="mt-4">
                   <h4 className="text-lg font-semibold text-gray-800">Genres for {mood} Mood</h4>
                   <div className="mt-2 flex flex-wrap gap-2">
