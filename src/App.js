@@ -12,6 +12,7 @@ import CustomFooter from './components/CustomFooter';
 import FacialExpressionDetection from './components/FacialExpressionDetection'; // Added FacialExpressionDetection
 import MuiscSuggestion from './components/MuiscSuggestion';
 
+
 // Layout component for all pages (with header and footer)
 function MainLayout() {
   return (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
+import api from '../api';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -8,6 +9,7 @@ function Login() {
     password: '',
   });
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,21 +25,50 @@ function Login() {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-    } else {
-      setErrors({});
-      console.log('Login form submitted:', formData);
-      
+      return;
+    }
+  
+    setErrors({});
+    try {
+      const response = await api.post('/login/', formData);
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+  
+      console.log('Login successful:', response.data);
+      navigate('/facial-expression-detection');
+    } catch (error) {
+      console.error('Login error:', error);
+      let errorMessage = 'Login failed. Please try again.';
+      if (error.error) {
+        errorMessage = error.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.non_field_errors) {
+        errorMessage = error.non_field_errors.join(' ');
+      }
+      setErrors({ api: errorMessage });
     }
   };
 
+
+
+  // Check if user is already logged in
+  React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      // If already logged in, redirect to facial expression detection page
+      navigate('/facial-expression-detection');
+    }
+  }, [navigate]);
+
   return (
     <section className="w-full min-h-screen bg-gradient-to-br from-gray-100 via-indigo-50 to-purple-50 flex items-center justify-center py-12 relative overflow-hidden">
-      {/* Subtle Background Wave Effect */}
       <div className="absolute inset-0 overflow-hidden opacity-10">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
           <path
@@ -50,7 +81,6 @@ function Login() {
 
       <div className="container mx-auto px-6 md:px-12 lg:px-24 relative z-10">
         <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 animate-fade-in-up border border-gray-100">
-          {/* Heading */}
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
               Welcome Back to MoodTunes
@@ -60,9 +90,7 @@ function Login() {
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
             <div className="relative group">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -82,7 +110,6 @@ function Login() {
               {errors.email && <p className="text-red-500 text-sm mt-1 animate-fade-in">{errors.email}</p>}
             </div>
 
-            {/* Password Field */}
             <div className="relative group">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -102,7 +129,8 @@ function Login() {
               {errors.password && <p className="text-red-500 text-sm mt-1 animate-fade-in">{errors.password}</p>}
             </div>
 
-            {/* Forgot Password Link */}
+            {errors.api && <p className="text-red-500 text-sm mt-1 animate-fade-in">{errors.api}</p>}
+
             <div className="text-right">
               <Link
                 to="/forgot-password"
@@ -112,7 +140,6 @@ function Login() {
               </Link>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-full font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg relative overflow-hidden group"
@@ -122,7 +149,6 @@ function Login() {
             </button>
           </form>
 
-          {/* Signup Link */}
           <p className="text-center text-gray-600 mt-6 text-sm">
             Don't have an account?{' '}
             <Link
