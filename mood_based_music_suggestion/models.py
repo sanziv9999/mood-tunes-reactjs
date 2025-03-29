@@ -26,17 +26,7 @@ class MoodGenre(models.Model):
         return f"{self.mood.name}: {', '.join(self.genres)}"
 
 
-class CapturedImage(models.Model):
-    image = models.ImageField(upload_to='static/captured_images/', null=True, blank=True)
-    mood = models.CharField(max_length=50)
-    captured_at = models.DateTimeField(default=timezone.now)
 
-    def __str__(self):
-        return f"{self.mood} - {self.captured_at}"
-
-    class Meta:
-        verbose_name = "Captured Image"
-        verbose_name_plural = "Captured Images"
 
 
 class ActivitySuggestion(models.Model):
@@ -93,3 +83,17 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+
+class CapturedImage(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True)
+    image = models.ImageField(upload_to='static/captured_images/', null=True, blank=True)
+    mood = models.CharField(max_length=50)
+    captured_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.mood} - {self.captured_at}"
+
+    class Meta:
+        verbose_name = "Captured Image"
+        verbose_name_plural = "Captured Images"

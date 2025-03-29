@@ -39,15 +39,20 @@ class MoodGenreSerializer(serializers.ModelSerializer):
         fields = ['id', 'mood', 'mood_id', 'genres']
 
 class CapturedImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False, allow_null=True, use_url=True)
-
     class Meta:
         model = CapturedImage
-        fields = ['id', 'image', 'mood', 'captured_at']
+        fields = ['id', 'user', 'image', 'mood', 'captured_at']
+        read_only_fields = ['captured_at']
         extra_kwargs = {
-            'image': {'required': False},
-            'mood': {'required': False}
+            'user': {'required': False}  # Make user not required in serializer
         }
+
+    def create(self, validated_data):
+        # Get the user from the request context
+        user = self.context['request'].user
+        if user.is_authenticated:
+            validated_data['user'] = user
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         logger.info(f"Validated data: {validated_data}")

@@ -110,8 +110,11 @@ class MoodGenreListView(generics.ListAPIView):
 
 
 class CapturedImageCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
     def post(self, request, *args, **kwargs):
-        serializer = CapturedImageSerializer(data=request.data)
+        serializer = CapturedImageSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
