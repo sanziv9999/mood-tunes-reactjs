@@ -35,7 +35,6 @@ const CapturedImageCRUD = () => {
     setLoading(true);
     try {
       const response = await api.get('/captured-images/');
-      console.log('API Response:', response.data); // Debug API response
       const processedImages = response.data.map(image => ({
         ...image,
         image_url: image.image.startsWith('http') ? image.image : `${api.defaults.baseURL}${image.image}`
@@ -72,12 +71,10 @@ const CapturedImageCRUD = () => {
       const formData = new FormData();
       formData.append('mood', values.mood);
       
-      // Only append image if a new one was selected
       if (fileList.length > 0 && fileList[0].originFileObj) {
         formData.append('image', fileList[0].originFileObj);
       } else {
-        // If no new image is selected but we want to keep the existing one
-        formData.append('image', '');  // Explicitly send empty to avoid deletion
+        formData.append('image', '');
       }
       
       const response = await api.patch(
@@ -91,7 +88,6 @@ const CapturedImageCRUD = () => {
         }
       );
       
-      // Update the images state with the new data
       const updatedImages = images.map(img =>
         img.id === editingImage.id
           ? {
@@ -100,7 +96,7 @@ const CapturedImageCRUD = () => {
                 ? response.data.image.startsWith('http') 
                   ? response.data.image 
                   : `${api.defaults.baseURL}${response.data.image}`
-                : img.image_url,  // Fallback to old URL if no new image
+                : img.image_url,
             }
           : img
       );
@@ -119,7 +115,6 @@ const CapturedImageCRUD = () => {
   };
 
   const handleDelete = (id) => {
-    console.log('Deleting image with id:', id); // Debug id
     if (!id) {
       toast.error('Cannot delete: Image ID is undefined');
       return;
@@ -175,6 +170,7 @@ const CapturedImageCRUD = () => {
       title: 'Image',
       dataIndex: 'image_url',
       key: 'image',
+      responsive: ['md'],
       render: (imageUrl) => (
         <Image
           width={100}
@@ -189,6 +185,7 @@ const CapturedImageCRUD = () => {
       title: 'Mood',
       dataIndex: 'mood',
       key: 'mood',
+      responsive: ['sm'],
       sorter: (a, b) => a.mood.localeCompare(b.mood),
       filters: moods.map(mood => ({ text: mood.name, value: mood.name })),
       onFilter: (value, record) => record.mood === value,
@@ -197,6 +194,7 @@ const CapturedImageCRUD = () => {
       title: 'Captured At',
       dataIndex: 'captured_at',
       key: 'captured_at',
+      responsive: ['lg'],
       render: (date) => new Date(date).toLocaleString(),
       sorter: (a, b) => new Date(a.captured_at) - new Date(b.captured_at),
     },
@@ -204,30 +202,27 @@ const CapturedImageCRUD = () => {
       title: 'Actions',
       key: 'actions',
       width: 150,
-      render: (_, record) => {
-        console.log('Record in actions:', record); // Debug record
-        return (
-          <Space size="middle">
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => showEditModal(record)}
-              disabled={loading}
-            />
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record.id)}
-              disabled={loading}
-            />
-          </Space>
-        );
-      },
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => showEditModal(record)}
+            disabled={loading}
+          />
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record.id)}
+            disabled={loading}
+          />
+        </Space>
+      ),
     },
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '16px' }}>
       <Card title="Captured Images Management">
         <Table
           columns={columns}
@@ -235,6 +230,7 @@ const CapturedImageCRUD = () => {
           rowKey="id"
           loading={loading}
           scroll={{ x: true }}
+          size="middle"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -249,7 +245,8 @@ const CapturedImageCRUD = () => {
         onOk={handleSubmit}
         onCancel={handleCancel}
         confirmLoading={loading}
-        width={700}
+        width="90%"
+        style={{ maxWidth: 700 }}
       >
         <Form form={form} layout="vertical">
           <Form.Item

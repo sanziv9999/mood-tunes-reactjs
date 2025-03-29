@@ -5,35 +5,6 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api';
 
-// Toast notification helpers
-const setSuccessMessage = (message) => {
-  toast.success(message, {
-    position: "top-right",
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: false,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    theme: "dark",
-  });
-};
-
-const setErrorMessage = (message) => {
-  toast.error(message, {
-    position: "top-right",
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: false,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    theme: "dark",
-  });
-};
-
-
-
 const { TabPane } = Tabs;
 const { Option } = Select;
 
@@ -48,6 +19,8 @@ const SuggestionCRUD = () => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
 
+  
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -57,7 +30,7 @@ const SuggestionCRUD = () => {
     try {
       await Promise.all([fetchMoods(), fetchActivities(), fetchRelaxations()]);
     } catch (error) {
-      setErrorMessage('Failed to load initial data');
+      toast.error('Failed to load initial data');
     } finally {
       setLoading(false);
     }
@@ -66,7 +39,6 @@ const SuggestionCRUD = () => {
   const fetchMoods = async () => {
     try {
       const response = await api.get('/moods/');
-      console.log('Fetched moods:', response.data);
       setMoods(response.data);
     } catch (error) {
       console.error('Error fetching moods:', error);
@@ -77,7 +49,6 @@ const SuggestionCRUD = () => {
   const fetchActivities = async () => {
     try {
       const response = await api.get('/activity-suggestions/');
-      console.log('Fetched activities:', response.data);
       setActivities(response.data);
     } catch (error) {
       console.error('Error fetching activities:', error);
@@ -88,7 +59,6 @@ const SuggestionCRUD = () => {
   const fetchRelaxations = async () => {
     try {
       const response = await api.get('/relaxation-activities/');
-      console.log('Fetched relaxations:', response.data);
       setRelaxations(response.data);
     } catch (error) {
       console.error('Error fetching relaxations:', error);
@@ -100,11 +70,10 @@ const SuggestionCRUD = () => {
     setModalLoading(true);
     try {
       const response = await api.get(`/activity-suggestions/${id}/`);
-      console.log(`Fetched activity with ID ${id}:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`Error fetching activity with ID ${id}:`, error);
-      setErrorMessage('Failed to fetch activity data');
+      toast.error('Failed to fetch activity data');
       return null;
     } finally {
       setModalLoading(false);
@@ -115,11 +84,10 @@ const SuggestionCRUD = () => {
     setModalLoading(true);
     try {
       const response = await api.get(`/relaxation-activities/${id}/`);
-      console.log(`Fetched relaxation with ID ${id}:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`Error fetching relaxation with ID ${id}:`, error);
-      setErrorMessage('Failed to fetch relaxation data');
+      toast.error('Failed to fetch relaxation data');
       return null;
     } finally {
       setModalLoading(false);
@@ -136,7 +104,7 @@ const SuggestionCRUD = () => {
     const fetchFunction = activeTab === 'activities' ? fetchActivityById : fetchRelaxationById;
     const data = await fetchFunction(record.id);
     if (!data) {
-      setErrorMessage('Failed to load record data for editing');
+      toast.error('Failed to load record data for editing');
       return;
     }
 
@@ -174,13 +142,13 @@ const SuggestionCRUD = () => {
           `/${activeTab === 'activities' ? 'activity-suggestions' : 'relaxation-activities'}/${editingRecord.id}/`, 
           payload
         );
-        setSuccessMessage('Record updated successfully');
+        toast.success('Record updated successfully');
       } else {
         await api.post(
           `/${activeTab === 'activities' ? 'activity-suggestions' : 'relaxation-activities'}/`, 
           payload
         );
-        setSuccessMessage('Record added successfully');
+        toast.success('Record added successfully');
       }
       
       setIsModalVisible(false);
@@ -188,7 +156,7 @@ const SuggestionCRUD = () => {
     } catch (error) {
       console.error('Operation error:', error);
       const errorMessage = error.response?.data?.detail || 'Operation failed';
-      setErrorMessage(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -207,11 +175,11 @@ const SuggestionCRUD = () => {
           await api.delete(
             `/${activeTab === 'activities' ? 'activity-suggestions' : 'relaxation-activities'}/${id}/`
           );
-          setSuccessMessage('Record deleted successfully');
+          toast.success('Record deleted successfully');
           activeTab === 'activities' ? fetchActivities() : fetchRelaxations();
         } catch (error) {
           console.error('Delete error:', error);
-          setErrorMessage('Failed to delete record');
+          toast.error('Failed to delete record');
         } finally {
           setLoading(false);
         }
@@ -296,7 +264,7 @@ const SuggestionCRUD = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '16px' }}>
       <Card>
         <Tabs 
           activeKey={activeTab} 
@@ -309,7 +277,9 @@ const SuggestionCRUD = () => {
               loading={loading}
               disabled={loading}
             >
-              Add {activeTab === 'activities' ? 'Activity' : 'Relaxation'}
+              <span className="responsive-text">
+                Add {activeTab === 'activities' ? 'Activity' : 'Relaxation'}
+              </span>
             </Button>
           }
         >
@@ -320,6 +290,7 @@ const SuggestionCRUD = () => {
               rowKey="id" 
               loading={loading}
               scroll={{ x: true }}
+              size="middle"
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -334,6 +305,7 @@ const SuggestionCRUD = () => {
               rowKey="id" 
               loading={loading}
               scroll={{ x: true }}
+              size="middle"
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -353,16 +325,12 @@ const SuggestionCRUD = () => {
         onOk={handleSubmit}
         onCancel={handleCancel}
         confirmLoading={loading}
-        width={600}
+        width="90%"
+        style={{ maxWidth: 600 }}
         destroyOnClose
-        afterOpenChange={(open) => {
-          if (open) {
-            console.log('Form values after open:', form.getFieldsValue());
-          }
-        }}
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col span={24}>
               <Form.Item
                 name="mood"

@@ -1,45 +1,72 @@
 import axios from 'axios';
 import api from '../api';
 
+const API_BASE_URL = 'http://127.0.0.1:8000/api/users/';
+
+const usersApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+usersApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
 export const fetchUsers = async () => {
   try {
-    const response = await axios.get('http://localhost:4000/users');
+    const response = await usersApi.get('/');
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
-    return [];
+    throw new Error(error.response?.data?.message || 'Failed to fetch users');
   }
 };
 
 export const deleteUserById = async (id) => {
   try {
-    const response = await axios.delete(`http://localhost:4000/users/${id}`);
-    console.log('User deleted successfully:', response.data);
+    const response = await usersApi.delete(`/${id}/`);
     return response.data;
   } catch (error) {
-    console.error('Error deleting user:', error);
-    return null;
+    console.error(`Error deleting user with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || 'Failed to delete user');
   }
 };
 
 export const fetchUserById = async (id) => {
   try {
-    const response = await axios.get(`http://localhost:4000/users/${id}`);
+    const response = await usersApi.get(`/${id}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching user:', error);
-    return null;
+    console.error(`Error fetching user with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch user');
   }
 };
 
-export const addUser = async (user) => {
+export const addUser = async (userData) => {
   try {
-    const response = await axios.post('http://localhost:4000/users', user);
-    console.log('User added successfully:', response.data);
+    const response = await usersApi.post('/', userData);
     return response.data;
   } catch (error) {
     console.error('Error adding user:', error);
-    return null;
+    throw new Error(error.response?.data?.message || 'Failed to add user');
+  }
+};
+
+export const updateUser = async (id, userData) => {
+  try {
+    const response = await usersApi.patch(`/${id}/`, userData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating user with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || 'Failed to update user');
   }
 };
 

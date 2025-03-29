@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/user/Users";
 import Settings from "./pages/Settings";
 import UserAdd from "./pages/user/UserAdd";
-import CustomLayout from './components/Layout';
+import CustomLayout from './components/CustomLayout';
 import Login from './pages/Auth/Login';
 import UserDetails from './pages/user/UserDetails';
 import 'antd/dist/reset.css';

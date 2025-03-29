@@ -62,7 +62,6 @@ const MoodGenreCRUD = () => {
     setEditingMoodGenre(record);
     setIsModalVisible(true);
     
-    // Use setTimeout to ensure the form is ready before setting fields
     setTimeout(() => {
       form.setFieldsValue({
         mood: record.mood?.id || null,
@@ -153,7 +152,7 @@ const MoodGenreCRUD = () => {
       title: 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 120,
+      width: 150,
       render: (_, record) => (
         <Space size="middle">
           <Button 
@@ -173,7 +172,7 @@ const MoodGenreCRUD = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '16px' }}>
       <Card
         title="Mood Genres Management"
         extra={
@@ -183,7 +182,7 @@ const MoodGenreCRUD = () => {
             onClick={showAddModal}
             loading={loading}
           >
-            Add Mood Genre
+            <span className="responsive-text">Add Mood Genre</span>
           </Button>
         }
       >
@@ -193,6 +192,7 @@ const MoodGenreCRUD = () => {
           rowKey="id" 
           loading={loading}
           scroll={{ x: true }}
+          size="middle"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -207,12 +207,13 @@ const MoodGenreCRUD = () => {
         onOk={handleSubmit}
         onCancel={handleCancel}
         confirmLoading={loading}
-        width={800}
+        width="90%"
+        style={{ maxWidth: 800 }}
         destroyOnClose
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={24} md={12}>
               <Form.Item
                 name="mood"
                 label="Mood"
@@ -234,7 +235,7 @@ const MoodGenreCRUD = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={24} md={12}>
               <Form.Item
                 name="genres"
                 label="Genres"

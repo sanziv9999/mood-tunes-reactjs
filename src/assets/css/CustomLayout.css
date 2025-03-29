@@ -1,53 +1,36 @@
-/* CustomLayout.css */
-
-/* Sidebar transitions */
-.ant-layout-sider {
-    transition: all 0.2s;
-  }
-  
-  /* Logo container */
-  .demo-logo-vertical {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 16px;
-    overflow: hidden;
-  }
-  
-  /* Notification dropdown */
-  .ant-dropdown-menu {
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-  
-  /* User dropdown */
-  .user-dropdown {
-    cursor: pointer;
-    padding: 0 12px;
-    display: inline-flex;
-    align-items: center;
-    transition: all 0.3s;
-  }
-  
-  .user-dropdown:hover {
-    background: rgba(0, 0, 0, 0.025);
+/* Prevent shrinking below mobile view */
+html, body {
+    min-width: 320px;
+    overflow-x: auto;
   }
   
   /* Responsive adjustments */
-  @media (max-width: 992px) {
-    .ant-layout-sider {
-      position: absolute;
-      z-index: 100;
-      height: 100vh;
-    }
-    
-    .ant-layout-sider-collapsed {
-      position: absolute;
-      z-index: 100;
+  @media (max-width: 767px) {
+    .ant-layout-content {
+      padding: 16px !important;
+      margin: 8px !important;
     }
     
     .ant-layout-header {
-      padding: 0 12px !important;
+      padding: 0 8px !important;
+    }
+    
+    /* Ensure content doesn't overflow on small screens */
+    .ant-table-container,
+    .ant-card,
+    .ant-form {
+      min-width: 0;
+      overflow-x: auto;
+    }
+  }
+  
+  /* For extremely small screens */
+  @media (max-width: 319px) {
+    body {
+      overflow-x: scroll;
+    }
+    
+    .ant-layout {
+      min-width: 320px;
     }
   }

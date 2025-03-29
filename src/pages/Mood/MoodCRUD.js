@@ -19,9 +19,7 @@ const MoodCRUD = () => {
   const fetchMoods = async () => {
     setLoading(true);
     try {
-      console.log('Fetching moods from:', api.defaults.baseURL + '/moods/');
       const response = await api.get('/moods/');
-      console.log('Received response:', response);
       setMoods(response.data);
     } catch (error) {
       console.error('Error fetching moods:', error);
@@ -110,14 +108,14 @@ const MoodCRUD = () => {
             icon={<EditOutlined />}
             onClick={() => showEditModal(record)}
           >
-            Edit
+            <span className="responsive-text">Edit</span>
           </Button>
           <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.name)}
           >
-            Delete
+            <span className="responsive-text">Delete</span>
           </Button>
         </Space>
       ),
@@ -125,7 +123,7 @@ const MoodCRUD = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '16px' }}>
       <Card
         title="Moods Management"
         extra={
@@ -135,7 +133,7 @@ const MoodCRUD = () => {
             onClick={showAddModal}
             disabled={loading}
           >
-            Add Mood
+            <span className="responsive-text">Add Mood</span>
           </Button>
         }
       >
@@ -145,6 +143,7 @@ const MoodCRUD = () => {
           rowKey="name"
           scroll={{ x: true }}
           loading={loading}
+          size="middle"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -161,6 +160,8 @@ const MoodCRUD = () => {
         confirmLoading={loading}
         okText={editingMood ? 'Update' : 'Create'}
         cancelButtonProps={{ disabled: loading }}
+        width="90%"
+        style={{ maxWidth: 500 }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
