@@ -26,12 +26,14 @@ const CapturedExpression = () => {
       try {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'));
+
+        const userId = user.id;
         if (!token || !user) {
           navigate('/login');
           return;
         }
 
-        const response = await api.get('/captured-images/');
+        const response = await api.get(`/captured-images/?user=${userId}`);
         // Sort images by date (newest first)
         const sortedImages = response.data.sort((a, b) => 
           new Date(b.captured_at) - new Date(a.captured_at)
