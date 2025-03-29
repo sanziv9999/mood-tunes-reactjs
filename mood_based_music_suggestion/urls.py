@@ -26,6 +26,7 @@ urlpatterns = [
      path('captured-images/', CapturedImageListCreate.as_view(), name='captured-image-list-create'),
      path('captured-images/<int:pk>/', CapturedImageRetrieveUpdateDestroy.as_view(), name='captured-image-detail'),
 
+
     # ActivitySuggestion URLs
      path('activity-suggestions/', 
           ActivitySuggestionListCreate.as_view(), 

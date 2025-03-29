@@ -162,6 +162,20 @@ class CapturedImageListCreate(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    def get_queryset(self):
+        queryset = CapturedImage.objects.all().order_by('-captured_at')
+        
+        # Get user_id from query parameters
+        user_id = self.request.query_params.get('user')
+        if user_id:
+            try:
+                queryset = queryset.filter(user=user_id)  # Filter by user foreign key
+            except ValueError:
+                # Handle case where user_id is not a valid integer
+                pass
+                
+        return queryset
+
 class CapturedImageRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = CapturedImage.objects.all()
     serializer_class = CapturedImageSerializer
@@ -169,6 +183,13 @@ class CapturedImageRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     # authentication_classes = [TokenAuthentication]
     authentication_classes = []
     permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_id = self.kwargs.get('user')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        return queryset.order_by('-captured_at')
 
     def perform_update(self, serializer):
         # Get the existing image instance
@@ -180,6 +201,16 @@ class CapturedImageRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         
         # Save the updated instance
         serializer.save()
+
+class UserCapturedImageList(generics.ListAPIView):
+    serializer_class = CapturedImageSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        return CapturedImage.objects.filter(user_id=user_id).order_by('-captured_at')
 
 class MoodListCreate(generics.ListCreateAPIView):
     queryset = Mood.objects.all()
